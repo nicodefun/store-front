@@ -319,5 +319,226 @@ const HomePage = async()=>{
 export default HomePage;
 ```
 
-## 8:00:40
+## 8:00:40 add featured products
+- add interfaces into type
+```ts
+export interface Product{
+    id:string;
+    category:Category;
+    name:string;
+    price:string;
+    isFeatured: boolean;
+    size: Size;
+    color: Color;
+    images: Image[];
+}
+
+export interface Image{
+    id: string;
+    url:string;
+
+}
+
+export interface Size{
+    id: string;
+    name:string;
+    value:string;
+}
+
+export interface Color{
+    id: string;
+    name:string;
+    value:string;
+}
+```
+- actions -> getProducts.ts
+- npm i query-string
+```ts
+import { Product } from "@/types";
+import qs from 'query-string'
+
+const URL = `${process.env.NEXT_PUBLIC_API_URL}/products`
+
+interface Query{
+    categoryId?:string;
+    colorId?:string;
+    sizeId?: string;
+    isFeatured?:boolean;
+}
+
+export const getProducts = async (query: Query):Promise<Product[]> =>{
+    const url = qs.stringifyUrl({
+        url:URL,
+        query:{
+            colorId: query.colorId,
+            sizeId: query.sizeId,
+            isFeatured: query.isFeatured,
+            categoryId: query.categoryId
+        }
+    })
+    const res = await fetch(url)
+    return res.json();
+}
+```
+## go to Homepage
+```tsx
+const products = await getProducts({isFeatured:true})
+...
+ <div className="flex flex-col gap-y-8 px-4 sm:px-6 lg:px-8">
+                <ProductList />
+            </div>
+            ...
+```
+- create ProductList component
+```tsx
+import { Product } from "@/types"
+import { NoResult } from "./ui/no-result"
+
+interface ProductListProps{
+    title:string,
+    items: Product[]
+}
+
+export const ProductList = ({
+    title,
+    items
+}:ProductListProps)=>{
+    return(
+        <div className="space-y-4">
+            <h3 className="font-bold text-3xl">{title}</h3>
+            {items.length === 0 && <NoResult/>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 
+            lg:grid-cols-4 gap-4">
+                {items.map(item=>(
+                    <div key={item.id}>{item.name}</div>
+                ))}
+            </div>
+        </div>
+    )
+}
+```
+## create Product Card component
+```tsx
+'use client'
+import { Product } from "@/types"
+import Image from "next/image"
+import { IconButton } from "./icon-button"
+import { Expand, ShoppingCart } from "lucide-react"
+import { Currency } from "./currency"
+
+interface ProduceCardProps{
+    data:Product
+}
+
+export const ProductCard = ({data}:ProduceCardProps)=>{
+    return(
+        <div className="bg-white group cursor-pointer
+          rounded-xl border p-3 space-y-4">
+            {/* images and actions */}
+            <div className="aspect-square rounded-xl bg-gray-100 relative">
+                <Image src={data?.images?.[0]?.url} alt='product-card-img' fill
+                className="aspect-square object-cover rounded-md"/>
+                <div className="opacity-0 group-hover:opacity-100
+                transition absolute w-full px-6 bottom-5">
+                    <div className="flex gap-x-6 justify-center">
+                        <IconButton onClickHandler={()=>{}}
+                        icon={<Expand size={20} className="text-gray-600"/>}
+                        />
+                        <IconButton onClickHandler={()=>{}}
+                        icon={<ShoppingCart size={20} className="text-gray-600"/>}
+                        />
+                    </div>
+                </div>
+            </div>
+            {/* description */}
+            <div className="font-semibold text-lg">
+                <p>{data.name}</p>
+                <p className="text-sm text-gray-500">
+                    {data.category?.name}
+                </p>
+            </div>
+            {/* price */}
+            <div className="flex items-center justify-between">
+                <Currency value={data?.price}/>
+            </div>
+        </div>
+    )
+}
+```
+
+- next.config.mjs
+```mjs
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+    images:{
+        domains:[
+            "res.cloudinary.com"
+        ]
+    }
+};
+
+export default nextConfig;
+
+```
+- create no results component
+```tsx
+'use client'
+export const NoResult = () => {
+  return (
+    <div className="flex items-center justify-center 
+        h-full w-full text-neutral-500">
+        No results found.
+    </div>
+  );
+};
+
+```
+- create IconButton component
+```tsx
+
+import { cn } from "@/lib/utils"
+import { MouseEventHandler } from "react";
+
+interface IconButtonProps{
+    onClickHandler?: MouseEventHandler<HTMLButtonElement> | undefined;
+    className?:string;
+    icon:React.ReactElement;
+}
+
+export const IconButton = ({
+    onClickHandler, 
+    className,
+    icon
+}:IconButtonProps)=>{
+    return (
+        <button onClick={onClickHandler} 
+        className={cn('rounded-full flex items-center justify-center bg-white border shadow-md p-2 hover:scale-110 transition', 
+        className)}>
+            {icon}
+        </button>
+    )
+}
+```
+
+- create currency component
+```tsx
+
+const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency', 
+    currency: 'USD'
+})
+
+interface CurrencyProps{
+    value?:String | number;
+}
+
+export const Currency = ({value}:CurrencyProps)=>{
+    return (
+        <div className="font-semibold">
+            {formatter.format(Number(value))}
+        </div>
+    )
+}
+```
+## 08:22:14 Individual product screen (Store)
 
