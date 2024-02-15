@@ -5,6 +5,7 @@
 - npm i @headlessui/react
 - npm install zustand
 - npm i react-hot-toast
+- npm i axios
 
 ## Environment setup & featured products (Store) 07:26:15
 - npx create-next-app@latest ecommerce-store --typescript --tailwind --eslint
@@ -1084,4 +1085,257 @@ import { MouseEventHandler } from "react"
                         />
 ...
 ```
+## 09:20:29 Add to Cart functionality (Store)
 - npm i react-hot-toast
+```tsx toast-provider
+'use client'
+
+import { Toaster } from "react-hot-toast"
+
+const ToastProvider = () => {
+  return (
+   <Toaster/>
+  )
+}
+
+export default ToastProvider
+
+```
+- add this into layout
+- create hooks -> use-cart.ts
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+
+```ts
+import { create } from 'zustand';
+import { toast } from 'react-hot-toast';
+import { persist, createJSONStorage } from "zustand/middleware"; 
+
+import { Product } from '@/types';
+import { AlertTriangle } from 'lucide-react';
+
+interface CartStore {
+  items: Product[];
+  addItem: (data: Product) => void;
+  removeItem: (id: string) => void;
+  removeAll: () => void;
+}
+
+const useCart = create(
+  persist<CartStore>((set, get) => ({
+  items: [],
+  addItem: (data: Product) => {
+    const currentItems = get().items;
+    const existingItem = currentItems.find((item) => item.id === data.id);
+    
+    if (existingItem) {
+      return toast('Item already in cart.');
+    }
+
+    set({ items: [...get().items, data] });
+    toast.success('Item added to cart.');
+  },
+  removeItem: (id: string) => {
+    set({ items: [...get().items.filter((item) => item.id !== id)] });
+    toast.success('Item removed from cart.');
+  },
+  removeAll: () => set({ items: [] }),
+}), {
+  name: 'cart-storage',
+  storage: createJSONStorage(() => localStorage)
+}));
+
+export default useCart;
+
+```
+- use this in navbar-actions
+```tsx
+...
+const cart = useCart();
+...
+  <span className="ml-2 text-sm font-medium text-white">
+          {cart.items.length}
+        </span>
+```
+- use it in product-card 
+```tsx
+ const onAddToCart:MouseEventHandler<HTMLButtonElement> = (event)=>{
+        event.stopPropagation(); //overwrite the main div's onClick
+        cart.addItem(data);
+    }
+```
+
+- back to navbar-action -> router
+```tsx
+  <ButtonEl onClick={()=>router.push('/cart')} className="flex items-center rounded-full bg-black px-4 py-2">
+        <ShoppingBag size={20} color="white" />
+```
+## create cart page
+```tsx
+"use client";
+import React from "react";
+import { useState, useEffect } from "react";
+import { ContainerEl } from "@/components/ui/container-el";
+import useCart from "@/hooks/use-cart";
+import { CartItem } from "@/components/cart/cart-item";
+
+
+const CartPage = () => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const cart = useCart();
+
+  if (!isMounted) return null;
+  return (
+    <div className="bg-white">
+      <ContainerEl>
+        <div className="px-4 py-16 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold text-black">Shopping Cart</h1>
+          <div className="mt-12 lg:grid w-full lg:items-start gap-x-12">
+            <div className="lg:col-span-7">
+              {cart.items.length === 0 && <p className="text-neutral-500">No items added to cart.</p>}
+              <ul>
+                {cart.items.map((item) => (
+                  <CartItem key={item.id} data={item} />
+                ))}
+              </ul>
+            </div>
+            <Summary />
+          </div>
+        </div>
+      </ContainerEl>
+    </div>
+  );
+};
+
+export default CartPage;
+
+```
+- create summary component
+- npm i axios
+```tsx
+"use client";
+import axios from "axios";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { ButtonEl } from "./ui/button-el";
+import { Currency } from "./ui/currency";
+import toast from "react-hot-toast";
+import useCart from "@/hooks/use-cart";
+
+interface SummaryProps {}
+
+const Summary = () => {
+  const items = useCart((state) => state.items);
+  const removeAll = useCart((state) => state.removeAll);
+  const searchParams = useSearchParams();
+
+  const totalPrice = items.reduce((total, item) => {
+    return total + Number(item.price);
+  }, 0);
+
+  const onCheckout = async () => {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/checkout`, 
+      {productIds: items.map(item=> item.id)} //pass data
+    );
+    window.location = response.data.url
+  };
+
+  return (
+    <div
+      className="mt-16 rounded-lg bg-gray-50 px-4 py-6 
+      sm:p-6 lg:col-span-5 lg:mt-0 lg:p-8"
+    >
+      <h2 className="text-lg font-medium text-gray-900">Order summary</h2>
+      <div className="mt-6 space-y-4">
+        <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="text-base font-medium text-gray-900">Order total</div>
+          <Currency value={totalPrice} />
+        </div>
+      </div>
+      <ButtonEl
+        onClick={onCheckout}
+        disabled={items.length === 0}
+        className="w-full mt-6"
+      >
+        Checkout
+      </ButtonEl>
+    </div>
+  );
+};
+
+export default Summary;
+
+```
+So, in summary, if the URL contains a query parameter named 'success', the useEffect hook will trigger, and the toast.success('payment completed') function will be called, displaying a success message to the user. This mechanism could be used to provide feedback to the user after a successful action, such as completing a payment or submitting a form.
+```tsx
+"use client";
+import axios from "axios";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { ButtonEl } from "./ui/button-el";
+import { Currency } from "./ui/currency";
+import toast from "react-hot-toast";
+import useCart from "@/hooks/use-cart";
+
+interface SummaryProps {}
+
+const Summary = () => {
+  const items = useCart((state) => state.items);
+  const removeAll = useCart((state) => state.removeAll);
+  const searchParams = useSearchParams();
+
+  const totalPrice = items.reduce((total, item) => {
+    return total + Number(item.price);
+  }, 0);
+
+  useEffect(()=>{
+    if(searchParams.get('success')) {
+        toast.success('payment completed')
+        removeAll();
+    }
+    if(searchParams.get('canceled')){
+        toast.error('Something went wrong')
+    }
+  }, [searchParams, removeAll])
+
+  const onCheckout = async () => {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/checkout`, 
+      {productIds: items.map(item=> item.id)} //pass data
+    );
+    window.location = response.data.url
+  };
+
+  return (
+    <div
+      className="mt-16 rounded-lg bg-gray-50 px-4 py-6 
+      sm:p-6 lg:col-span-5 lg:mt-0 lg:p-8"
+    >
+      <h2 className="text-lg font-medium text-gray-900">Order summary</h2>
+      <div className="mt-6 space-y-4">
+        <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="text-base font-medium text-gray-900">Order total</div>
+          <Currency value={totalPrice} />
+        </div>
+      </div>
+      <ButtonEl
+        onClick={onCheckout}
+        disabled={items.length === 0}
+        className="w-full mt-6"
+      >
+        Checkout
+      </ButtonEl>
+    </div>
+  );
+};
+
+export default Summary;
+
+```
+## 9:46:14 Stripe Setup & Checkout finalization (Admin, Store)  
