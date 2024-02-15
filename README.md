@@ -2,6 +2,7 @@
 - npm i clsx tailwind-merge
 - npx create-next-app@latest ecommerce-store --typescript --tailwind --eslint
 - npm i lucide-react
+- npm i @headlessui/react
 
 ## Environment setup & featured products (Store) 07:26:15
 - npx create-next-app@latest ecommerce-store --typescript --tailwind --eslint
@@ -541,4 +542,149 @@ export const Currency = ({value}:CurrencyProps)=>{
 }
 ```
 ## 08:22:14 Individual product screen (Store)
+- handle click
+- router - router.push(`/product/${data?.id}`)
+- create page 
+- getProduct action
 
+```ts getProduct
+import { Product } from "@/types";
+
+const URL = `${process.env.NEXT_PUBLIC_API_URL}/products`
+
+export const getProduct = async(id:string):Promise<Product>=>{
+    const res = await fetch(`${URL}/${id}`);
+    return res.json()
+}
+```
+- Gallery component
+- npm i @headlessui/react
+
+```tsx gallery
+'use client'
+import { Image as ImageType } from "@/types"
+import { Tab } from "@headlessui/react"
+import Image from "next/image"
+import { GalleryTab } from "./gallery-tab"
+
+interface GalleryProps{
+    images: ImageType[]
+}
+
+
+export const Gallery = ({images}:GalleryProps)=>{
+    return(
+       <Tab.Group as='div' className="flex flex-col-reverse ">
+            <div className="mx-auto mt-6 hidden w-full max-w-2xl 
+            sm:block lg:max-w-none">
+                <Tab.List className='grid grid-cols-4 gap-6'>
+                    {images.map(image=>(
+                        <GalleryTab key={image.id} image={image}/>
+                    ))}
+                </Tab.List>
+            </div>
+            <Tab.Panels className="aspect-square w-full">
+                {images.map(image=>(
+                    <Tab.Panel key={image.id}>
+                        <div className="aspect-square relative h-full w-full 
+                        sm:rounded-lg overflow-hidden">
+                            <Image fill src={image.url} alt="gallery-img" 
+                            className="object-cover object-center"/>
+                        </div>
+                    </Tab.Panel>
+                ))}
+            </Tab.Panels>
+       </Tab.Group>
+    )
+}
+```
+
+- gallery-tab component
+
+For example, the Tab component exposes a selected state, which tells you if the tab is currently selected.
+
+```tsx
+'use client'
+
+import { Image as ImageType } from "@/types"
+import Image from "next/image"
+import { Tab } from "@headlessui/react"
+import { cn } from "@/lib/utils"
+
+interface GalleryTabProps{
+    image: ImageType
+}
+
+export const GalleryTab = ({image}: GalleryTabProps)=>{
+    return(
+        <Tab className='relative flex aspect-square cursor-pointer items-center
+        justify-center rounded-md bg-white'>
+            {({selected})=>(
+                <div >
+                    <span className="absolute h-full w-full aspect-square
+                    inset-0 overflow-hidden rounded-md">
+                        <Image fill src={image.url} alt='gallery-tab-img' 
+                        className="object-cover object-center"/>
+                    </span>
+                    <span className={cn(
+                        "absolute inset-0 rounded-md ring-2 ring-offset-2",
+                        selected ? 'ring-black' : 'ring-transparent'
+                    )}/>
+                </div>
+            )}
+        </Tab>
+    )
+}
+```
+- info component
+```tsx
+"use client";
+import { Product } from "@/types";
+import { Currency } from "./ui/currency";
+import { useState, useEffect } from "react";
+import { ButtonEl } from "./ui/button-el";
+import { ShoppingCart } from "lucide-react";
+
+interface InfoProps {
+  data: Product;
+}
+
+export const Info = ({ data }: InfoProps) => {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  if (!isMounted) return null;
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900">{data.name}</h1>
+      <div className="mt-3 flex items-end justify-between">
+        <div className="text-2xl text-gray-900">
+          <Currency value={data?.price} />
+        </div>
+      </div>
+      <hr className="my-4" />
+      <div className="flex flex-col gap-y-6">
+        <div className="flex items-center gap-x-4">
+          <h3 className="font-semibold text-black">Size:</h3>
+          <div>{data?.size?.value}</div>
+        </div>
+        <div className="flex items-center gap-x-4">
+          <h3 className="font-semibold text-black">Color:</h3>
+          <div
+            className="h-6 w-6 rounded-full border border-gray-600"
+            style={{ backgroundColor: data?.color?.value }}
+          />
+        </div>
+      </div>
+      <div className="mt-10 flex items-center gap-x-3">
+        <ButtonEl className="flex items-center gap-x-2">
+          Add To Cart
+          <ShoppingCart/>
+        </ButtonEl>
+      </div>
+    </div>
+  );
+};
+
+```
