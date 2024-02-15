@@ -3,6 +3,7 @@
 - npx create-next-app@latest ecommerce-store --typescript --tailwind --eslint
 - npm i lucide-react
 - npm i @headlessui/react
+- npm install zustand
 
 ## Environment setup & featured products (Store) 07:26:15
 - npx create-next-app@latest ecommerce-store --typescript --tailwind --eslint
@@ -688,3 +689,241 @@ export const Info = ({ data }: InfoProps) => {
 };
 
 ```
+## category
+- export const revalidate = 0; //no cache
+- actions -> getSizes/getColors/getCategory
+
+```tsx page
+import { getProducts } from "@/actions/get-products";
+import { getSizes } from "@/actions/get-sizes";
+import { getColors } from "@/actions/get-colors";
+import { getCategory } from "@/actions/get-category";
+import { ContainerEl } from "@/components/ui/container-el";
+import BillboardEl from "@/components/billboard";
+
+export const revalidate = 0; //no cache
+
+interface CategoryPageProps {
+  params: {
+    categoryId: string;
+  };
+  searchParams: {
+    colorId: string;
+    sizeId: string;
+  };
+}
+
+const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
+  const products = await getProducts({
+    categoryId: params.categoryId,
+    colorId: searchParams.colorId,
+    sizeId: searchParams.sizeId,
+  });
+
+  const sizes = await getSizes();
+  const colors = await getColors();
+  const category = await getCategory(params.categoryId);
+
+  return (
+    <div className="bg-white">
+      <ContainerEl>
+        <BillboardEl data={category.billboard} />
+        <div className="px-4 sm:px-6 lg:px-8 pb-24">
+          {/* mobile:filters */}
+          <div className="hidden lg:block">
+            <Filter />
+
+          </div>
+        </div>
+      </ContainerEl>
+    </div>
+  );
+};
+
+export default CategoryPage;
+
+```
+- filter component
+
+```tsx
+"use client";
+
+import qs from "query-string";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { ButtonEl } from "../ui/button-el";
+import { cn } from "@/lib/utils";
+import { Color, Size } from "@/types";
+
+interface FilterProps {
+  data: (Size | Color)[];
+  name: string;
+  valueKey: string;
+}
+
+const Filter: React.FC<FilterProps> = ({ data, name, valueKey }) => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const selectedValue = searchParams.get(valueKey);
+
+  const onClick = (id: string) => {
+    const current = qs.parse(searchParams.toString());
+
+    const query = {
+      ...current,
+      [valueKey]: id,
+    };
+
+    if (current[valueKey] === id) {
+      query[valueKey] = null;
+    }
+
+    const url = qs.stringifyUrl(
+      {
+        url: window.location.href,
+        query,
+      },
+      { skipNull: true }
+    );
+
+    router.push(url);
+  };
+
+  return (
+    <div className="mb-8">
+      <h3 className="text-lg font-semibold">{name}</h3>
+      <hr className="my-4" />
+      <div className="flex flex-wrap gap-2">
+        {data.map((filter) => (
+          <div key={filter.id} className="flex items-center">
+            <ButtonEl
+              className={cn(
+                "rounded-md text-sm text-gray-800 p-2 bg-white border border-gray-300",
+                selectedValue === filter.id && "bg-black text-white"
+              )}
+              onClick={() => onClick(filter.id)}
+            >
+              {filter.name}
+            </ButtonEl>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Filter;
+```
+
+- buttonEl needs props...
+```tsx
+"use client";
+import { forwardRef } from "react";
+import { cn } from "@/lib/utils";
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+
+export const ButtonEl = forwardRef<HTMLButtonElement, ButtonProps>(
+   ({
+    className, 
+    children,
+    disabled, 
+    type="button",
+    ...props
+   }, ref)=>{
+    return(
+        <button ref={ref} className={cn(`
+        w-auto rounded-full bg-black border-transparent px-5 py-3 
+        disabled:cursor-not-allowed disabled:opacity-50 
+        text-white font-semibold hover:opacity-75 transition
+        `,
+        className)}
+        {...props}
+        >
+            {children}
+        </button>
+    )
+   } 
+);
+
+```
+
+## mobile filter
+- import { Dialog } from "@headlessui/react";
+```tsx
+"use client";
+
+import { useState } from "react";
+import { Plus, X } from "lucide-react";
+import { Dialog } from "@headlessui/react";
+
+import { IconButton } from "../ui/icon-button";
+import { ButtonEl } from "../ui/button-el";
+import { Color, Size } from "@/types";
+
+import Filter from "./filter";
+
+interface MobileFiltersProps {
+  sizes: Size[],
+  colors: Color[],
+}
+
+export const MobileFilters: React.FC<MobileFiltersProps> = ({
+  sizes,
+  colors
+}) => {
+  const [open, setOpen] = useState(false);
+
+  const onOpen = () => setOpen(true);
+  const onClose = () => setOpen(false);
+
+  return (
+    <>
+      <ButtonEl
+        onClick={onOpen}
+        className="flex items-center gap-x-2 lg:hidden"
+      >
+        Filters
+        <Plus size={20} />
+      </ButtonEl>
+
+      <Dialog open={open} as="div" className="relative z-40 lg:hidden" onClose={onClose}>
+        
+        {/* Background color and opacity */}
+        <div className="fixed inset-0 bg-black bg-opacity-25" />
+        
+        {/* Dialog position */}
+        <div className="fixed inset-0 z-40 flex">
+          <Dialog.Panel className="relative ml-auto flex h-full 
+          w-full max-w-xs flex-col overflow-y-auto bg-white py-4 pb-6 shadow-xl">
+            
+            {/* Close button */}
+            <div className="flex items-center justify-end px-4">
+              <IconButton icon={<X size={15} />} onClickHandler={onClose} />
+            </div>
+
+            <div className="p-4">
+              <Filter
+                valueKey="sizeId" 
+                name="Sizes" 
+                data={sizes}
+              />
+              <Filter 
+                valueKey="colorId" 
+                name="Colors" 
+                data={colors}
+              />
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    </>
+  );
+};
+
+```
+## create pop-up model 9:07:29
+- npm install zustand
+

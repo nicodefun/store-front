@@ -1,5 +1,5 @@
 import { ContainerEl } from "@/components/ui/container-el";
-import { BillboardEl } from "@/components/billboard";
+import BillboardEl from "@/components/billboard";
 import { getBillboard } from "@/actions/get-billboard";
 import { getProducts } from "@/actions/get-products";
 import { ProductList } from "@/components/product-list";
