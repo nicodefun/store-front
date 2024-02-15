@@ -4,6 +4,7 @@
 - npm i lucide-react
 - npm i @headlessui/react
 - npm install zustand
+- npm i react-hot-toast
 
 ## Environment setup & featured products (Store) 07:26:15
 - npx create-next-app@latest ecommerce-store --typescript --tailwind --eslint
@@ -926,4 +927,161 @@ export const MobileFilters: React.FC<MobileFiltersProps> = ({
 ```
 ## create pop-up model 9:07:29
 - npm install zustand
+- hooks -> usePreviewModal
+```ts
+import {create} from 'zustand'
+import { Product } from '@/types'
 
+interface PreviewModalStore{
+    isOpen:boolean;
+    data?:Product;
+    onOpen: (data:Product)=>void;
+    onClose:()=>void;
+}
+
+const usePreviewModal = create<PreviewModalStore>(set=>({
+    isOpen:false,
+    data:undefined,
+    onOpen:(data:Product) =>set({
+        data:data, 
+        isOpen:true
+    }),
+    onClose:()=>set({
+        isOpen:false
+    })
+}))
+
+export default usePreviewModal;
+```
+- create ui -> modal.tsx
+- import { Transition } from "@headlessui/react"
+```tsx
+"use client";
+
+import { Transition, Dialog } from "@headlessui/react";
+import { Fragment } from "react";
+import { IconButton } from "./icon-button";
+import { X } from "lucide-react";
+
+interface ModalProps {
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+export const Modal = ({ open, onClose, children }: ModalProps) => {
+  return (
+    <Transition show={open} appear as={Fragment}>
+      <Dialog as="div" className="relative z-10" onClose={onClose}>
+        <div className="fixed inset-0 bg-black bg-opacity-50" />
+        <div className="fixed inset-0 overflow-auto">
+          <div
+            className="flex min-h-full items-center justify-center
+                    p-4 text-center"
+          >
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-50 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-3xl overflow-hidden rounded-lg text-left align-middle">
+                <div className="relative flex w-full items-center overflow-hidden bg-white px-4 pb-8 pt-14 shadow-2xl sm:px-6 sm:pt-8 md:p-6 lg:p-8">
+                  <div className="absolute right-4 top-4">
+                    <IconButton onClickHandler={onClose} icon={<X size={15} />} />
+                  </div>
+                  {children}
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+};
+
+```
+## create preview-modal 
+```tsx
+import usePreviewModal from "@/hooks/use-preview-modal";
+import { Modal } from "./ui/modal";
+import { Gallery } from "./gallery";
+import { Info } from "./info";
+
+export const PreviewModal = () => {
+  const previewModal = usePreviewModal();
+  const product = usePreviewModal((state) => state.data);
+  if (!product) return null;
+  return (
+    <Modal 
+    open={previewModal.isOpen} 
+    onClose={previewModal.onClose}>
+        <div className="grid w-full grid-cols-1 items-start 
+        gap-x-6 gap-y-8 sm:grid-cols-12 lg:gap-x-8">
+            <div className="sm:col-span-4 lg:col-span-5">
+                <Gallery images={product.images}/>
+            </div>
+            <div className="sm:col-span-8 lg:col-span-7">
+                <Info data={product}/>
+            </div>
+        </div>
+    </Modal>
+  );
+};
+
+```
+- create Modal Provider 
+```tsx
+"use client";
+import { PreviewModal } from "@/components/preview-modal";
+import { useState, useEffect } from "react";
+
+const ModalProvider = () => {
+  const [mounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  if (!mounted) return null;
+  return <>
+  <PreviewModal/>
+  </>;
+};
+
+export default ModalProvider;
+
+```
+- add modalProvider into root layout
+```tsx
+ return (
+    <html lang="en">
+      <body className={font.className}  suppressHydrationWarning={true}>
+        <ModalProvider/>
+        <Navbar />
+        {children}
+        <Footer />
+      </body>
+    </html>
+  );
+```
+- go to ProductCard
+```tsx
+import usePreviewModal from "@/hooks/use-preview-modal"
+import { MouseEventHandler } from "react"
+...
+ const previewModal = usePreviewModal();
+
+    const onPreview:MouseEventHandler<HTMLButtonElement> = (event)=>{
+        event.stopPropagation(); //overwrite the main div's onClick
+        previewModal.onOpen(data);
+    }
+    ...
+ <IconButton onClickHandler={onPreview}
+                        icon={<Expand size={20} className="text-gray-600"/>}
+                        />
+...
+```
+- npm i react-hot-toast
