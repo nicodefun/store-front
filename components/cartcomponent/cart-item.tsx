@@ -1,7 +1,6 @@
 "use client";
 import { Product } from "@/types";
 import Image from "next/image";
-import toast from "react-hot-toast";
 import { X } from "lucide-react";
 import { IconButton } from "../ui/icon-button";
 import { Currency } from "../ui/currency";
