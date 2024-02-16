@@ -2,7 +2,7 @@
 import { Product } from "@/types";
 import { Currency } from "./ui/currency";
 import { useState, useEffect } from "react";
-import { ButtonEl } from "./ui/button-el";
+import Button from "./ui/button-el";
 import { ShoppingCart } from "lucide-react";
 
 interface InfoProps {
@@ -38,10 +38,10 @@ export const Info = ({ data }: InfoProps) => {
         </div>
       </div>
       <div className="mt-10 flex items-center gap-x-3">
-        <ButtonEl className="flex items-center gap-x-2">
+        <Button className="flex items-center gap-x-2">
           Add To Cart
           <ShoppingCart/>
-        </ButtonEl>
+        </Button>
       </div>
     </div>
   );
