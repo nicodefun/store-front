@@ -6,6 +6,7 @@ import useCart from "@/hooks/use-cart";
 import { CartItem } from "@/components/cart/cart-item";
 import Summary from "@/components/summary";
 
+export const revalidate = 0;
 
 const CartPage = () => {
   const [isMounted, setIsMounted] = useState(false);
