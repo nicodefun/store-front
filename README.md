@@ -6,6 +6,7 @@
 - npm install zustand
 - npm i react-hot-toast
 - npm i axios
+- npm install next-themes
 
 ## Environment setup & featured products (Store) 07:26:15
 - npx create-next-app@latest ecommerce-store --typescript --tailwind --eslint
@@ -1339,3 +1340,31 @@ export default Summary;
 
 ```
 ## 9:46:14 Stripe Setup & Checkout finalization (Admin, Store)  
+https://ithelp.ithome.com.tw/articles/10268821
+
+## 10:27:54
+- theme provider
+- npm install next-themes
+```tsx
+"use client"
+ 
+import * as React from "react"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
+import { type ThemeProviderProps } from "next-themes/dist/types"
+ 
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+}
+```
+- in root layout
+```tsx
+   <body className={font.className} suppressHydrationWarning={true}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <ModalProvider />
+          <ToastProvider />
+          <Navbar />
+          {children}
+          <Footer />
+        </ThemeProvider>
+      </body>
+```

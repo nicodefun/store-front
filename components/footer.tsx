@@ -1,3 +1,4 @@
+'use client'
 export const Footer = () => {
   return (
     <footer className="bg-white border-t">
